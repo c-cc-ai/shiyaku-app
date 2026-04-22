@@ -10356,6 +10356,17 @@
       "ncdCode": "-",
       "janCode": "4987562119004",
       "remarks": "ｾﾝﾀｰ登録削除済"
+    },
+    {
+      "facility": "京都南病院",
+      "orderName": "テスト",
+      "maker": "",
+      "wholesaler": "",
+      "productName": "",
+      "package": "",
+      "ncdCode": "",
+      "janCode": "",
+      "remarks": "テスト"
     }
   ]
 }
