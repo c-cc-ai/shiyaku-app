@@ -205,34 +205,14 @@ tbody tr:focus .btn-add-list { box-shadow: 0 0 0 2px rgba(36,114,232,0.25); }
 }
 
 /* 管理パネル */
-.admin-panel { background: var(--white); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 18px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.admin-panel-title { font-size: 13px; font-weight: 700; color: var(--text-dim); margin-right: 6px; }
-.btn-admin { padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; border: 1.5px solid; transition: all 0.15s; }
-.btn-export { background: #e8f0fc; border-color: var(--accent); color: var(--accent); }
-.btn-export:hover { background: var(--accent); color: #fff; }
-.btn-clear-local { background: #fff8e0; border-color: #f0c040; color: #7a5c00; }
-.btn-clear-local:hover { background: #f0c040; color: #000; }
-.btn-export-orders { background: #e8f4ee; border-color: #7dc9a8; color: #1a7a50; }
-.btn-export-orders:hover { background: #00a07a; color: #fff; border-color: #00a07a; }
-.admin-info { font-size: 11px; color: var(--text-muted); margin-left: auto; line-height: 1.5; }
-.admin-notice { background: #fff8e0; border: 1px solid #f0c040; border-radius: 8px; padding: 6px 12px; font-size: 11px; color: #7a5c00; margin-top: 4px; }
-.btn-github { background: #f0f4ff; border-color: #4f46e5; color: #4f46e5; }
-.btn-github:hover { background: #4f46e5; color: #fff; }
-.btn-github:disabled { opacity: 0.5; cursor: not-allowed; }
-/* GitHub保存モーダル */
-.gh-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
-.gh-modal-overlay.open { display: flex; }
-.gh-modal { background: #fff; border-radius: 16px; padding: 28px; width: 420px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,0.18); }
-.gh-modal h3 { font-size: 15px; font-weight: 700; color: var(--text); margin: 0 0 6px; }
-.gh-modal p { font-size: 12px; color: var(--text-dim); margin: 0 0 16px; line-height: 1.6; }
-.gh-modal label { font-size: 12px; font-weight: 600; color: var(--text-dim); display: block; margin-bottom: 4px; }
-.gh-modal input { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 13px; font-family: 'DM Mono', monospace; margin-bottom: 16px; }
-.gh-modal input:focus { outline: none; border-color: #4f46e5; }
-.gh-modal-buttons { display: flex; gap: 10px; justify-content: flex-end; }
-.gh-modal-status { font-size: 12px; margin-top: 10px; padding: 8px 12px; border-radius: 8px; display: none; }
-.gh-modal-status.success { background: #e8f4ee; color: #1a7a50; display: block; }
-.gh-modal-status.error { background: #fde8e8; color: #9c1a1a; display: block; }
-.gh-modal-status.loading { background: #f0f4ff; color: #4f46e5; display: block; }
+.admin-panel { background: var(--white); border: 1px solid #c7c0f7; border-radius: 14px; box-shadow: var(--shadow); padding: 12px 18px; margin-bottom: 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.btn-save { padding: 9px 24px; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; border: none; background: #4f46e5; color: #fff; transition: all 0.15s; }
+.btn-save:hover { background: #3730a3; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-status { font-size: 12px; padding: 5px 12px; border-radius: 8px; display: none; }
+.save-status.success { background: #e8f4ee; color: #1a7a50; display: block; }
+.save-status.error { background: #fde8e8; color: #9c1a1a; display: block; }
+.save-status.loading { background: #f0f4ff; color: #4f46e5; display: block; }
 </style>
 </head>
 <body>
@@ -255,34 +235,8 @@ tbody tr:focus .btn-add-list { box-shadow: 0 0 0 2px rgba(36,114,232,0.25); }
 
   <!-- 管理パネル -->
   <div class="admin-panel" id="adminPanel">
-    <span class="admin-panel-title">⚙️ 管理</span>
-    <button class="btn-admin btn-export" onclick="exportMasterData()" title="商品マスタ（追加・編集含む）をJSONでエクスポート">📤 マスタ変更をエクスポート</button>
-    <button class="btn-admin btn-clear-local" onclick="clearLocalEdits()" title="このブラウザのローカル編集を削除">🔄 ローカル編集をクリア</button>
-    <button class="btn-admin btn-export-orders" onclick="exportAllOrderLists()" title="全院所の発注リストをCSVでエクスポート">📋 発注リスト一括出力</button>
-    <button class="btn-admin btn-github" id="btnGithub" onclick="openGithubModal()" title="マスタをGitHubに保存して全端末に反映">☁️ GitHubに保存（全端末反映）</button>
-    <div class="admin-info">
-      ℹ️ 商品の追加・編集は<b>このブラウザにのみ</b>保存されます。<br>
-      他端末に反映するには「☁️ GitHubに保存」を押してください。
-    </div>
-  </div>
-
-  <!-- GitHub保存モーダル -->
-  <div class="gh-modal-overlay" id="ghModalOverlay">
-    <div class="gh-modal">
-      <h3>☁️ GitHubにマスタを保存</h3>
-      <p>GitHub Personal Access Token を入力してください。<br>トークンは保存されません（このページを閉じると消えます）。</p>
-      <label>GitHub Owner（ユーザー名またはOrg名）</label>
-      <input type="text" id="ghOwner" placeholder="例: your-username" />
-      <label>リポジトリ名</label>
-      <input type="text" id="ghRepo" placeholder="例: shiyaku-app" />
-      <label>Personal Access Token</label>
-      <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
-      <div class="gh-modal-buttons">
-        <button class="btn-admin btn-clear-local" onclick="closeGithubModal()">キャンセル</button>
-        <button class="btn-admin btn-github" id="btnGithubSave" onclick="saveToGitHub()">保存する</button>
-      </div>
-      <div class="gh-modal-status" id="ghStatus"></div>
-    </div>
+    <button class="btn-save" id="btnSave" onclick="saveToGitHub()">💾 保存</button>
+    <div class="save-status" id="saveStatus"></div>
   </div>
 
   <!-- STEP 1 -->
@@ -426,10 +380,28 @@ const MASTER_DATA = {"堀川病院":[{"facility":"堀川病院","orderName":"BCP
 // ─── 管理機能 ────────────────────────────────
 
 // 1) マスタ変更をエクスポート（全院所のローカル編集を統合したJSONをDL）
-function exportMasterData() {
-  const exportData = {};
+// ─── GitHub Actions経由でマスタ保存 ────────────────────
+const GH_OWNER = 'c-cc-ai';
+const GH_REPO  = 'shiyaku-app';
+// ★ トークンはHTMLに書かず、GitHub ActionsのSecretsに保管
+// ★ 以下のGH_PA_TOKENはActions経由呼び出し用（workflow_dispatch専用トークン）
+// ★ index.htmlをGitHubにアップロードした後、以下の手順でSecretsに登録してください
+const GH_PA_TOKEN = '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';  // ★ ここに貼る（Actions呼び出し専用Fine-grainedトークン）
+
+async function saveToGitHub() {
+  const btn    = document.getElementById('btnSave');
+  const status = document.getElementById('saveStatus');
+
+  if (!GH_PA_TOKEN) {
+    status.className = 'save-status error';
+    status.textContent = '❌ トークン未設定です。管理者にお問い合わせください。';
+    return;
+  }
+
+  // 現在のマスタ（ローカル編集統合）をJSON化
+  const masterData = {};
   for (const facility of hospitals) {
-    exportData[facility] = getFacilityData(facility).map(r => {
+    masterData[facility] = getFacilityData(facility).map(r => {
       const clean = { ...r };
       delete clean._masterIdx;
       delete clean._addedIdx;
@@ -437,246 +409,46 @@ function exportMasterData() {
       return clean;
     });
   }
-  const json = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const now = new Date();
-  const ts = now.getFullYear() + ('0'+(now.getMonth()+1)).slice(-2) + ('0'+now.getDate()).slice(-2) +
-             '_' + ('0'+now.getHours()).slice(-2) + ('0'+now.getMinutes()).slice(-2);
-  a.download = `shiyaku_master_${ts}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const jsonStr = JSON.stringify(masterData);
 
-  // エクスポートした内容のローカル編集数を通知
-  let totalEdits = 0;
-  for (const facility of hospitals) {
-    const edits = getLocalEdits(facility);
-    totalEdits += edits.added.length + Object.keys(edits.edited).length + edits.deleted.size;
-  }
-  if (totalEdits > 0) {
-    showAdminNotice(`✅ エクスポート完了（${totalEdits}件のローカル編集を含む）\nサーバーの data.json を更新後、「ローカル編集をクリア」を実行してください。`);
-  } else {
-    showAdminNotice('ℹ️ ローカル編集はありません。現在のマスタデータをエクスポートしました。');
-  }
-}
-
-// 2) ローカル編集をクリア（サーバー反映済みの場合に使用）
-function clearLocalEdits() {
-  let totalEdits = 0;
-  for (const facility of hospitals) {
-    const edits = getLocalEdits(facility);
-    totalEdits += edits.added.length + Object.keys(edits.edited).length + edits.deleted.size;
-  }
-  if (totalEdits === 0) {
-    alert('クリアするローカル編集はありません。');
-    return;
-  }
-  if (!confirm(`⚠️ 全院所のローカル編集（${totalEdits}件）を削除します。\nサーバーの data.json に反映済みの場合のみ実行してください。\n\n続行しますか？`)) return;
-
-  for (const facility of hospitals) {
-    if (localEdits[facility]) {
-      localEdits[facility] = { added: [], edited: {}, deleted: new Set() };
-    }
-  }
-  saveLocalEdits();
-  renderTable();
-  buildHospitalGrid();
-  showAdminNotice('✅ ローカル編集をクリアしました。ページを再読み込みするとサーバーの最新マスタが反映されます。');
-}
-
-// 3) 全院所の発注リストをCSVで一括出力
-function exportAllOrderLists() {
-  const rows = [['院所', '院所発注表記', 'NCDコード', 'JANコード', 'メーカー', '納入卸', '品名', '包装', '備考', '数量']];
-  let hasData = false;
-  for (const facility of hospitals) {
-    const listObj = orderLists[facility];
-    if (!listObj || !listObj.keys || listObj.keys.length === 0) continue;
-    hasData = true;
-    for (const key of listObj.keys) {
-      const entry = listObj.entries[key];
-      if (!entry) continue;
-      const r = entry.item;
-      const remarks = entry.remarksOverride !== undefined ? entry.remarksOverride : (r.remarks || '');
-      rows.push([
-        facility,
-        r.orderName || '',
-        r.ncdCode || '',
-        r.janCode || '',
-        r.maker || '',
-        r.wholesaler || '',
-        r.productName || '',
-        r.package || '',
-        remarks,
-        entry.qty || 1
-      ]);
-    }
-  }
-
-  if (!hasData) {
-    alert('出力する発注リストがありません。');
-    return;
-  }
-
-  const BOM = '\uFEFF';
-  const csv = BOM + rows.map(row =>
-    row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')
-  ).join('\r\n');
-
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const now = new Date();
-  const ts = now.getFullYear() + ('0'+(now.getMonth()+1)).slice(-2) + ('0'+now.getDate()).slice(-2) +
-             '_' + ('0'+now.getHours()).slice(-2) + ('0'+now.getMinutes()).slice(-2);
-  a.download = `hachu_list_${ts}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ─── GitHub保存機能 ────────────────────────────────
-
-function openGithubModal() {
-  // 前回入力値を復元（tokenはセキュリティ上保存しない）
-  const savedOwner = sessionStorage.getItem('gh_owner') || '';
-  const savedRepo  = sessionStorage.getItem('gh_repo')  || '';
-  document.getElementById('ghOwner').value = savedOwner || 'c-cc-ai';
-  document.getElementById('ghRepo').value  = savedRepo  || 'shiyaku-app';
-  document.getElementById('ghToken').value = '';
-  document.getElementById('ghStatus').className = 'gh-modal-status';
-  document.getElementById('ghStatus').textContent = '';
-  document.getElementById('ghModalOverlay').classList.add('open');
-}
-
-function closeGithubModal() {
-  document.getElementById('ghModalOverlay').classList.remove('open');
-}
-
-async function saveToGitHub() {
-  const owner = document.getElementById('ghOwner').value.trim();
-  const repo  = document.getElementById('ghRepo').value.trim();
-  const token = document.getElementById('ghToken').value.trim();
-  const status = document.getElementById('ghStatus');
-  const saveBtn = document.getElementById('btnGithubSave');
-
-  if (!owner || !repo || !token) {
-    status.className = 'gh-modal-status error';
-    status.textContent = '⚠️ すべての項目を入力してください。';
-    return;
-  }
-
-  // セッション中はowner/repoを記憶（tokenは記憶しない）
-  sessionStorage.setItem('gh_owner', owner);
-  sessionStorage.setItem('gh_repo', repo);
-
-  // 現在のマスタ（ローカル編集統合済み）を取得
-  const masterData = getMergedMasterData();
-  const content = JSON.stringify(masterData, null, 2);
-  const encoded = btoa(unescape(encodeURIComponent(content)));
-
-  status.className = 'gh-modal-status loading';
-  status.textContent = '⏳ GitHubに接続中…';
-  saveBtn.disabled = true;
+  btn.disabled = true;
+  status.className = 'save-status loading';
+  status.textContent = '⏳ 保存中…';
 
   try {
-    const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents/data.json`;
-
-    // 既存ファイルのSHAを取得（更新に必要）
-    let sha = null;
-    const getRes = await fetch(apiBase, {
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json'
+    // GitHub Actions の workflow_dispatch をトリガー
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/update-master.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${GH_PA_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { data: jsonStr }
+        })
       }
-    });
-    if (getRes.ok) {
-      const data = await getRes.json();
-      sha = data.sha;
-    } else if (getRes.status !== 404) {
-      throw new Error(`GitHub接続エラー (${getRes.status})`);
+    );
+
+    if (res.status === 204) {
+      // 204 No Content = 受付成功
+      status.className = 'save-status success';
+      status.textContent = '✅ 保存完了！1〜2分後に全端末へ反映されます。';
+      setTimeout(() => { status.className = 'save-status'; }, 8000);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `エラー (${res.status})`);
     }
-
-    // ファイルを作成または更新
-    const now = new Date();
-    const ts = now.toLocaleString('ja-JP');
-    const body = {
-      message: `マスタ更新 ${ts}`,
-      content: encoded,
-      ...(sha ? { sha } : {})
-    };
-
-    const putRes = await fetch(apiBase, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!putRes.ok) {
-      const err = await putRes.json();
-      throw new Error(err.message || `保存エラー (${putRes.status})`);
-    }
-
-    status.className = 'gh-modal-status success';
-    status.textContent = '✅ 保存完了！1〜2分後に全端末へ反映されます。';
-    showAdminNotice('☁️ GitHubへの保存が完了しました。全端末はリロードで最新マスタを取得できます。');
 
   } catch (e) {
-    status.className = 'gh-modal-status error';
-    status.textContent = `❌ エラー: ${e.message}`;
+    status.className = 'save-status error';
+    status.textContent = `❌ ${e.message}`;
   } finally {
-    saveBtn.disabled = false;
+    btn.disabled = false;
   }
-}
-
-// ローカル編集を統合したマスタデータを返す
-function getMergedMasterData() {
-  const merged = {};
-  for (const facility of Object.keys(MASTER_DATA)) {
-    const edits = getLocalEdits(facility);
-    if (!edits || (!edits.added?.length && !edits.modified && !edits.deleted?.length)) {
-      merged[facility] = MASTER_DATA[facility];
-      continue;
-    }
-    let items = [...MASTER_DATA[facility]];
-    // 削除
-    if (edits.deleted?.length) {
-      items = items.filter((_, i) => !edits.deleted.includes(i));
-    }
-    // 編集（ncdCodeで照合）
-    if (edits.modified) {
-      items = items.map(item => {
-        const key = item.ncdCode + '|' + item.orderName;
-        return edits.modified[key] ? { ...item, ...edits.modified[key] } : item;
-      });
-    }
-    // 追加
-    if (edits.added?.length) {
-      items = [...items, ...edits.added];
-    }
-    merged[facility] = items;
-  }
-  return merged;
-}
-
-// ─── 管理通知を表示 ────────────────────────────────
-function showAdminNotice(msg) {
-  let notice = document.getElementById('adminNotice');
-  if (!notice) {
-    notice = document.createElement('div');
-    notice.id = 'adminNotice';
-    notice.className = 'admin-notice';
-    document.getElementById('adminPanel').appendChild(notice);
-  }
-  notice.textContent = msg;
-  notice.style.display = 'block';
-  clearTimeout(notice._timer);
-  notice._timer = setTimeout(() => { notice.style.display = 'none'; }, 8000);
 }
 
 // ─── Per-facility local overrides ───────────
