@@ -379,14 +379,11 @@ const MASTER_DATA = {"堀川病院":[{"facility":"堀川病院","orderName":"BCP
 
 // ─── 管理機能 ────────────────────────────────
 
-// 1) マスタ変更をエクスポート（全院所のローカル編集を統合したJSONをDL）
-// ─── GitHub Actions経由でマスタ保存 ────────────────────
+// ─── GitHub Contents API でマスタ直接保存 ────────────────────
 const GH_OWNER = 'c-cc-ai';
 const GH_REPO  = 'shiyaku-app';
-// ★ トークンはHTMLに書かず、GitHub ActionsのSecretsに保管
-// ★ 以下のGH_PA_TOKENはActions経由呼び出し用（workflow_dispatch専用トークン）
-// ★ index.htmlをGitHubにアップロードした後、以下の手順でSecretsに登録してください
-const GH_PA_TOKEN = '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';  // ★ ここに貼る（Actions呼び出し専用Fine-grainedトークン）
+const GH_PA_TOKEN = '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';
+const GH_FILE_PATH = 'data.json';  // リポジトリ内のパス
 
 async function saveToGitHub() {
   const btn    = document.getElementById('btnSave');
@@ -409,38 +406,54 @@ async function saveToGitHub() {
       return clean;
     });
   }
-  const jsonStr = JSON.stringify(masterData);
+  const jsonStr = JSON.stringify(masterData, null, 2);
 
   btn.disabled = true;
   status.className = 'save-status loading';
   status.textContent = '⏳ 保存中…';
 
-  try {
-    // GitHub Actions の workflow_dispatch をトリガー
-    const res = await fetch(
-      `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/update-master.yml/dispatches`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `token ${GH_PA_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ref: 'main',
-          inputs: { data: jsonStr }
-        })
-      }
-    );
+  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}`;
+  const headers = {
+    'Authorization': `token ${GH_PA_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
 
-    if (res.status === 204) {
-      // 204 No Content = 受付成功
+  try {
+    // ① 現在のファイルの SHA を取得（更新に必要）
+    let sha = null;
+    const getRes = await fetch(apiUrl, { headers });
+    if (getRes.ok) {
+      const fileInfo = await getRes.json();
+      sha = fileInfo.sha;
+    } else if (getRes.status !== 404) {
+      const err = await getRes.json().catch(() => ({}));
+      throw new Error(err.message || `SHA取得エラー (${getRes.status})`);
+    }
+
+    // ② ファイル内容を Base64 エンコード
+    const base64Content = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    // ③ PUT でファイルを作成または更新
+    const body = {
+      message: `マスタ更新 ${new Date().toLocaleString('ja-JP')}`,
+      content: base64Content,
+    };
+    if (sha) body.sha = sha;  // 既存ファイルの場合は SHA が必要
+
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body)
+    });
+
+    if (putRes.ok) {
       status.className = 'save-status success';
-      status.textContent = '✅ 保存完了！1〜2分後に全端末へ反映されます。';
+      status.textContent = '✅ 保存完了！まもなく全端末へ反映されます。';
       setTimeout(() => { status.className = 'save-status'; }, 8000);
     } else {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `エラー (${res.status})`);
+      const err = await putRes.json().catch(() => ({}));
+      throw new Error(err.message || `保存エラー (${putRes.status})`);
     }
 
   } catch (e) {
