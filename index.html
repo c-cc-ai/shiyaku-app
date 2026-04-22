@@ -379,6 +379,7 @@ tbody tr:focus .btn-add-list { box-shadow: 0 0 0 2px rgba(36,114,232,0.25); }
 // ─── GitHub 設定 ────────────────────────────────────────────
 const GH_OWNER = 'c-cc-ai';
 const GH_REPO  = 'shiyaku-app';
+const GH_PA_TOKEN = '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';
 const GH_FILE_PATH = 'data.json';
 
 let MASTER_DATA = {};
@@ -387,30 +388,20 @@ let MASTER_DATA = {};
 async function loadMasterData() {
   document.getElementById('hospitalGrid').innerHTML =
     '<div style="padding:24px;color:var(--text-muted)">⏳ データ読み込み中…</div>';
-
-  // Privateリポジトリ対応：GitHub Contents APIを使用
-  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}?ref=main&_=${Date.now()}`;
-  const token = localStorage.getItem('shiyaku_gh_token') || '';
-  const headers = { 'Accept': 'application/vnd.github.v3+json' };
-  if (token) headers['Authorization'] = `token ${token}`;
-
+  // Privateリポジトリ対応: Contents APIにトークンを付けてfetch
+  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}`;
   try {
-    const res = await fetch(apiUrl, { headers });
-    if (res.status === 401 || res.status === 404) {
-      // トークンが必要 or 未設定
-      const inputToken = prompt('アクセストークンを入力してください（管理者にお問い合わせください）：');
-      if (!inputToken) {
-        document.getElementById('hospitalGrid').innerHTML =
-          '<div style="padding:24px;color:#c03030">❌ トークンが必要です。管理者にお問い合わせください。</div>';
-        return false;
+    const res = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `token ${GH_PA_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
       }
-      localStorage.setItem('shiyaku_gh_token', inputToken);
-      return loadMasterData(); // 再試行
-    }
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const fileInfo = await res.json();
-    const decoded = decodeURIComponent(escape(atob(fileInfo.content.replace(/\n/g, ''))));
-    MASTER_DATA = JSON.parse(decoded);
+    // Contents APIはBase64エンコードされた内容を返す
+    const jsonStr = decodeURIComponent(escape(atob(fileInfo.content.replace(/\n/g, ''))));
+    MASTER_DATA = JSON.parse(jsonStr);
   } catch (e) {
     document.getElementById('hospitalGrid').innerHTML =
       `<div style="padding:24px;color:#c03030">❌ データ読み込み失敗: ${e.message}<br>ページを再読み込みしてください。</div>`;
@@ -421,10 +412,17 @@ async function loadMasterData() {
 
 // ─── 管理機能 ────────────────────────────────
 
-// ─── GitHub Actions経由でマスタ保存 ────────────────────
+// ─── GitHub Contents API でマスタ直接保存 ────────────────────
+
 async function saveToGitHub() {
   const btn    = document.getElementById('btnSave');
   const status = document.getElementById('saveStatus');
+
+  if (!GH_PA_TOKEN) {
+    status.className = 'save-status error';
+    status.textContent = '❌ トークン未設定です。管理者にお問い合わせください。';
+    return;
+  }
 
   // 現在のマスタ（ローカル編集統合）をJSON化
   const masterData = {};
@@ -437,48 +435,56 @@ async function saveToGitHub() {
       return clean;
     });
   }
-  const jsonStr = JSON.stringify(masterData);
+  const jsonStr = JSON.stringify(masterData, null, 2);
 
   btn.disabled = true;
   status.className = 'save-status loading';
   status.textContent = '⏳ 保存中…';
 
-  // パスワード入力でトークンを取得
-  const token = prompt('管理者パスワード（トークン）を入力してください：');
-  if (!token) {
-    status.className = 'save-status';
-    btn.disabled = false;
-    return;
-  }
+  const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}`;
+  const headers = {
+    'Authorization': `token ${GH_PA_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
 
   try {
-    const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/update-master.yml/dispatches`;
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ref: 'main',
-        inputs: { data: jsonStr }
-      })
+    // ① 現在のファイルの SHA を取得（更新に必要）
+    let sha = null;
+    const getRes = await fetch(apiUrl, { headers });
+    if (getRes.ok) {
+      const fileInfo = await getRes.json();
+      sha = fileInfo.sha;
+    } else if (getRes.status !== 404) {
+      const err = await getRes.json().catch(() => ({}));
+      throw new Error(err.message || `SHA取得エラー (${getRes.status})`);
+    }
+
+    // ② ファイル内容を Base64 エンコード
+    const base64Content = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    // ③ PUT でファイルを作成または更新
+    const body = {
+      message: `マスタ更新 ${new Date().toLocaleString('ja-JP')}`,
+      content: base64Content,
+    };
+    if (sha) body.sha = sha;  // 既存ファイルの場合は SHA が必要
+
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body)
     });
 
-    if (res.status === 204) {
+    if (putRes.ok) {
       status.className = 'save-status success';
-      status.textContent = '✅ 保存完了！1〜2分後に全端末へ反映されます。';
+      status.textContent = '✅ 保存完了！まもなく全端末へ反映されます。';
       setTimeout(() => { status.className = 'save-status'; }, 8000);
-      // ローカル編集をクリア
-      for (const facility of hospitals) {
-        localEdits[facility] = { added: [], edited: {}, deleted: new Set() };
-      }
-      saveLocalEdits();
     } else {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `エラー (${res.status})`);
+      const err = await putRes.json().catch(() => ({}));
+      throw new Error(err.message || `保存エラー (${putRes.status})`);
     }
+
   } catch (e) {
     status.className = 'save-status error';
     status.textContent = `❌ ${e.message}`;
